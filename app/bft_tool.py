@@ -4,13 +4,7 @@ from pathlib import Path
 import time
 from collections.abc import Callable
 
-AVAILABLE_TESTS = [
-    "cal_set_freq_test",
-    "rf_init_g2_rn_3ghz",
-    "mfg_pda_g2_rn_3ghz",
-    "rf_init_g2_rn_6ghz",
-    "mfg_pda_g2_rn_6ghz",
-]
+from app.bft_constants import BFT_TESTS, BFT_SPECS, PDA_CONFIGS
 
 class BFTTool:
     def __init__(self, serial_no: str):
@@ -33,23 +27,28 @@ class BFTTool:
         args_str = f"-- {args}" if args else ""
         return f"t3 devicetest --force --output {out_path} -H {self.hostfile} {script} {args_str}"
 
+    def _build_pda_args(self, band: str) -> str:
+        cfg = PDA_CONFIGS[band]
+        return (
+            f"--fixture_loss_c0={cfg['fixture_loss_c0']} "
+            f"--fixture_loss_c1={cfg['fixture_loss_c1']}"
+        )
+
     def get_commands(self) -> dict[str, str]:
         """Maps each test name to its t3 command."""
-        return {
-            "cal_set_freq_test" : self.build_t3_cmd("cal_set_freq_test", "/usr/local/ntf/system/cal_set_freq_test.ntf"),
-            "rf_init_g2_rn_3ghz": self.build_t3_cmd("rf_init_g2_rn_3ghz", "/usr/local/ntf/qa/rf/system/mfg_ntfs/rf_init_g2_rn_3ghz.ntf"),
-            "mfg_pda_g2_rn_3ghz": self.build_t3_cmd("mfg_pda_g2_rn_3ghz", "/usr/local/ntf/qa/rf/pda/mfg_pda_g2_rn_3ghz.ntf", "--fixture_loss_c0=8.09,8.43,8.80,8.57,8.53,8.14,8.11,8.02 --fixture_loss_c1=8.17,8.58,8.11,8.61,8.72,8.28,8.22,8.14"),
-            "rf_init_g2_rn_6ghz": self.build_t3_cmd("rf_init_g2_rn_6ghz", "/usr/local/ntf/qa/rf/system/mfg_ntfs/rf_init_g2_rn_6ghz.ntf"),
-            "mfg_pda_g2_rn_6ghz": self.build_t3_cmd("mfg_pda_g2_rn_6ghz", "/usr/local/ntf/qa/rf/pda/mfg_pda_g2_rn_6ghz.ntf", "--fixture_loss_c0=11.8,11.75,11.78,11.34,11.69,11.32,11.48,11.58 --fixture_loss_c1=10.77,11.03,11.21,10.73,10.76,10.9,11.11,11.15"),
-        }
-        
-        # return {
-        #     "cal_set_freq_test" : "sleep 1",
-        #     "rf_init_g2_rn_3ghz": "sleep 2",
-        #     "mfg_pda_g2_rn_3ghz": "sleep 3",
-        #     "rf_init_g2_rn_6ghz": "sleep 4",
-        #     "mfg_pda_g2_rn_6ghz": "sleep 5",
-        # }
+        commands = {}
+        for test_name, spec in BFT_SPECS.items():
+            args = spec.get("args", "")
+            if spec.get("args_type") == "pda":
+                args = self._build_pda_args(spec["band"])
+
+            commands[test_name] = self.build_t3_cmd(
+                spec["sub_dir"],
+                spec["script"],
+                args,
+            )
+
+        return commands
         
     def run_selected(self, selected: list[str], on_result: Callable[[dict], None]):
         commands = self.get_commands()
