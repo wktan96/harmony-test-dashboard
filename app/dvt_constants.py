@@ -96,6 +96,76 @@ DVT_FLOWS = {
     ],
 }
 
+PRESET_3GHZ_REDUCED = {
+    "3GHz Test Flow 1": [
+        "tx_rf_init_cont_tx_3g_tf1",
+        "tx_freq_align_3g_tf1",
+        "tx_pda_low_3g",
+        "tx_pda_mid_3g",
+        "tx_pda_high_3g",
+        "tx_ant_iso_3g",
+    ],
+    "3GHz Test Flow 3": [
+        "tx_rf_init_cont_tx_3g_tf3",
+        "tx_freq_align_3g_tf3",
+        "tx_gain_3g",
+    ],
+    "3GHz Test Flow 4": [
+        "tx_rf_init_txcal_3g",
+        "tx_cal_path_3g",
+        "tx_cal_iso_3g",
+    ],
+    "3GHz Test Flow 5": [
+        "rx_rf_init_rxcal_3g_tf5",
+        "rx_freq_align_3g",
+        "rx_gain_nf_3g",
+        "rx_ant_iso_3g",
+    ],
+    "3GHz Test Flow 6": [
+        "rx_rf_init_rxcal_3g_tf6",
+        "rx_cal_path_3g",
+        "rx_cal_iso_3g",
+    ],
+}
+
+PRESET_6GHZ_REDUCED = {
+    "6GHz Test Flow 1": [
+        "tx_rf_init_cont_tx_6g_tf1",
+        "tx_freq_align_6g_tf1",
+        "tx_pda_low_unii34",
+        "tx_pda_mid_unii34",
+        "tx_pda_high_unii34",
+        "tx_pda_low_unii5",
+        "tx_pda_mid_unii5",
+        "tx_pda_high_unii5",
+        "tx_pda_low_unii7",
+        "tx_pda_mid_unii7",
+        "tx_pda_high_unii7",
+        "tx_ant_iso_6g",
+    ],
+    "6GHz Test Flow 3": [
+        "tx_rf_init_cont_tx_6g_tf3",
+        "tx_freq_align_6g_tf3",
+        "tx_gain_6g",
+    ],
+    "6GHz Test Flow 4": [
+        "tx_rf_init_txcal_6g",
+        "tx_cal_path_6g",
+        "tx_cal_iso_6g",
+    ],
+    "6GHz Test Flow 5": [
+        "rx_rf_init_rxcal_6g_tf5",
+        "rx_freq_align_6g",
+        "rx_gain_nf_6g",
+        "rx_ant_iso_6g",
+    ],
+    "6GHz Test Flow 6": [
+        "rx_rf_init_rxcal_6g_tf6",
+        "rx_cal_path_6g",
+        "rx_cal_iso_6g",
+    ],    
+}
+
 # Data-driven test specifications
 # Structure: test_name -> {band, flow, sub_dir, script, args}
 TEST_SPECS = {

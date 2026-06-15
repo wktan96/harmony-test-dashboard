@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from collections.abc import Callable
 
-from app.dvt_constants import DVT_FLOWS, TEST_SPECS, RF_INIT_ARGS, PDA_CONFIGS
+from app.dvt_constants import DVT_FLOWS, TEST_SPECS, RF_INIT_ARGS, PDA_CONFIGS, PRESET_3GHZ_REDUCED, PRESET_6GHZ_REDUCED
 
 TEMPERATURE_OPTIONS = {
     "25c":  25,
@@ -13,7 +13,8 @@ TEMPERATURE_OPTIONS = {
 
 # Re-export for backward compatibility
 DVT_TESTS = [test for tests in DVT_FLOWS.values() for test in tests]
-
+PRESET_3GHZ_REDUCED_TESTS = [test for tests in PRESET_3GHZ_REDUCED.values() for test in tests]
+PRESET_6GHZ_REDUCED_TESTS = [test for tests in PRESET_6GHZ_REDUCED.values() for test in tests]
 
 class DVTTool:
     def __init__(self, serial_no: str, temperature: str):

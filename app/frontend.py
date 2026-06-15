@@ -45,6 +45,23 @@ def format_rows(rows: list[dict]) -> list[dict]:
         {**r, "duration": format_duration(r.get("duration"))} for r in rows
     ]
 
+def apply_preset(preset: list[str], dvt_checkboxes: dict, dvt_flows: dict, dvt_flow_toggles: dict):
+    # Uncheck all first
+    for cb in dvt_checkboxes.values():
+        cb.set_value(False)
+    for toggle in dvt_flow_toggles.values():
+        toggle.set_value(False)
+
+    # Check only preset tests
+    for test in preset:
+        if test in dvt_checkboxes:
+            dvt_checkboxes[test].set_value(True)
+
+    # Enable flow toggles where all tests in that flow are selected
+    for flow_name, flow_tests in dvt_flows.items():
+        if all(t in preset for t in flow_tests):
+            dvt_flow_toggles[flow_name].set_value(True)
+
 
 def make_table_columns():
     return [
@@ -242,6 +259,32 @@ async def index():
                         ui.notify("Please select at least one test", type="warning", position="top")
                         return
 
+                    # ── Countdown if scheduled ────────
+                    if dvt_schedule_toggle.value:
+                        try:
+                            h, m, s = map(int, dvt_schedule_time.value.strip().split(":"))
+                            delay = h * 3600 + m * 60 + s
+                        except ValueError:
+                            ui.notify("Invalid time format. Use HH:MM:SS", type="warning", position="top")
+                            return
+
+                        if delay > 0:
+                            dvt_schedule_cancelled["value"] = False  # reset flag
+                            dvt_run_btn.disable()
+                            dvt_stop_btn.disable()
+                            dvt_cancel_btn.set_visibility(True)      # show cancel button
+                            remaining = delay
+
+                            while remaining > 0:
+                                if dvt_schedule_cancelled["value"]:  # check flag each tick
+                                    return                            # abort the run entirely
+                                dvt_countdown_label.set_text(f"Starting in: {format_duration(remaining)}")
+                                await asyncio.sleep(1)
+                                remaining -= 1
+
+                            dvt_cancel_btn.set_visibility(False)     # hide when countdown ends
+                            dvt_countdown_label.set_text("")
+
                     # Show only tables for flows that have selected tests
                     for flow_name in dvt_flows.keys():
                         has_tests = any(t in selected for t in dvt_flows[flow_name])
@@ -312,10 +355,39 @@ async def index():
                 async def handle_dvt_stop():
                     await stop_run("dvt/stop")
 
-                with ui.row():
+                dvt_schedule_cancelled = {"value": False}  # mutable flag
+
+                async def handle_dvt_cancel_schedule():
+                    dvt_schedule_cancelled["value"] = True
+                    dvt_countdown_label.set_text("")
+                    dvt_run_btn.enable()
+                    dvt_cancel_btn.set_visibility(False)
+
+                with ui.row().classes("items-center gap-4"):
                     dvt_run_btn  = ui.button("Run",  on_click=handle_dvt_run)
                     dvt_stop_btn = ui.button("Stop", on_click=handle_dvt_stop).props("color=red")
+                    dvt_cancel_btn = ui.button("Cancel Schedule", on_click=handle_dvt_cancel_schedule).props("color=orange")
                     dvt_stop_btn.disable()
+                    dvt_cancel_btn.set_visibility(False)
+
+                # ── Scheduled start ───────────────────
+                with ui.row().classes("items-center gap-4 mt-2"):
+                    ui.label("Schedule Start").classes("text-sm")
+                    dvt_schedule_toggle = ui.switch(value=False)
+                    dvt_schedule_time   = ui.input(
+                        label="Start after (HH:MM:SS)",
+                        value="00:00:00"
+                    ).classes("w-40")
+                    dvt_schedule_time.set_visibility(False)
+
+                dvt_countdown_label = ui.label("").classes("text-sm text-orange-500")
+
+                def on_schedule_toggle_change():
+                    dvt_schedule_time.set_visibility(dvt_schedule_toggle.value)
+                    if not dvt_schedule_toggle.value:
+                        dvt_countdown_label.set_text("")
+
+                dvt_schedule_toggle.on_value_change(on_schedule_toggle_change)               
 
                 # Fetch flow structure from backend
                 async with httpx.AsyncClient() as client:
@@ -327,6 +399,21 @@ async def index():
                     run_all_3g = ui.switch(value=False)
                     ui.label("Run All 6GHz Flows").classes("font-medium")
                     run_all_6g = ui.switch(value=False)
+
+                # ── Preset buttons ────────────────────
+                with ui.row().classes("items-center gap-4 mb-2"):
+                    async def handle_3ghz_reduced():
+                        async with httpx.AsyncClient() as client:
+                            preset = (await client.get(f"{BASE_URL}/dvt/presets/3ghz-reduced")).json()
+                        apply_preset(preset, dvt_checkboxes, dvt_flows, dvt_flow_toggles)
+
+                    async def handle_6ghz_reduced():
+                        async with httpx.AsyncClient() as client:
+                            preset = (await client.get(f"{BASE_URL}/dvt/presets/6ghz-reduced")).json()
+                        apply_preset(preset, dvt_checkboxes, dvt_flows, dvt_flow_toggles)
+
+                    ui.button("3GHz Reduced Flow", on_click=handle_3ghz_reduced).props("outline")
+                    ui.button("6GHz Reduced Flow", on_click=handle_6ghz_reduced).props("outline")
 
                 def apply_band_toggle(band_prefix: str, enable: bool):
                     for flow_name, toggle in dvt_flow_toggles.items():

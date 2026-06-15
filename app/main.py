@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from nicegui import ui
 from app.schemas import BFTRunRequest, DVTRunRequest, RunStatus, TestResult
 from app.bft_tool import BFTTool, BFT_TESTS
-from app.dvt_tool import DVTTool, DVT_TESTS, DVT_FLOWS
+from app.dvt_tool import DVTTool, DVT_TESTS, DVT_FLOWS, PRESET_3GHZ_REDUCED_TESTS, PRESET_6GHZ_REDUCED_TESTS
 from app import frontend  # noqa: F401
 
 app = FastAPI(title="BFT Dashboard API", version="0.5.0")
@@ -156,6 +156,14 @@ def list_dvt_tests():
 @app.get("/dvt/flows")
 def list_dvt_flows():
     return DVT_FLOWS
+
+@app.get("/dvt/presets/3ghz-reduced", response_model=list[str])
+def get_3ghz_reduced_preset():
+    return PRESET_3GHZ_REDUCED_TESTS
+
+@app.get("/dvt/presets/6ghz-reduced", response_model=list[str])
+def get_6ghz_reduced_preset():
+    return PRESET_6GHZ_REDUCED_TESTS
 
 @app.post("/dvt/run", response_model=RunStatus, status_code=202)
 def start_dvt_run(request: DVTRunRequest, background_tasks: BackgroundTasks):
