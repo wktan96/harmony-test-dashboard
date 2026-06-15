@@ -1,4 +1,4 @@
-# Web Dashboard
+assets/harmony-test-dashboard.mp4# Web Dashboard
  
 Web dashboard for running functional and performance tests on RF hardware.
  
@@ -41,4 +41,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ### Demo
 
-<img width="1280" height="720" alt="harmony-test-dashboard-short" src="https://github.com/user-attachments/assets/eb96c794-a578-4a23-9a7f-7bb1fd5972a0" />
+<img width="1631" height="860" alt="overview" src="https://github.com/user-attachments/assets/7759fa02-2be8-4dc1-ae7d-23c4e19cb14f" />
+
+
+https://github.com/user-attachments/assets/6c07463e-1c03-4d3d-aa48-52cea537b09c
