@@ -1,4 +1,4 @@
-assets/harmony-test-dashboard.mp4# Web Dashboard
+# Web Dashboard
  
 Web dashboard for running functional and performance tests on RF hardware.
  
