@@ -4,6 +4,7 @@ from datetime import datetime
 from nicegui import ui
 
 BASE_URL = "http://localhost:8000"
+PING_HOST = "192.168.12.2"
 
 
 # ─── Shared helper functions ──────────────────────────
@@ -17,6 +18,21 @@ async def fetch_tests(endpoint: str) -> list[str]:
 async def start_run(endpoint: str, payload: dict):
     async with httpx.AsyncClient() as client:
         await client.post(f"{BASE_URL}/{endpoint}", json=payload)
+
+
+async def check_ping(host: str, timeout: int = 2) -> bool:
+    """Ping the host once with a timeout. Returns True if host responds."""
+    import subprocess
+
+    def _ping():
+        try:
+            cmd = ["ping", "-c", "1", "-W", str(timeout), host]
+            result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    return await asyncio.to_thread(_ping)
 
 
 async def poll_status(endpoint: str) -> dict:
@@ -104,15 +120,19 @@ async def run_polling_loop(
     run_btn: ui.button,
     stop_btn: ui.button,
 ):
-    start_time = datetime.now()
+    start_time = None
 
     while True:
         data = await poll_status(poll_endpoint)
 
-        elapsed = int((datetime.now() - start_time).total_seconds())
+        # Start the total timer when the first test actually begins running
+        running = next((r for r in data["results"] if r["status"] == "running"), None)
+        if running and start_time is None:
+            start_time = datetime.now()
+
+        elapsed = 0 if start_time is None else int((datetime.now() - start_time).total_seconds())
         timer_label.set_text(f"Total test time: {format_duration(elapsed)}")
 
-        running = next((r for r in data["results"] if r["status"] == "running"), None)
         if running:
             status_label.set_text(f"Running: {running['name']}...")
 
@@ -129,7 +149,7 @@ async def run_polling_loop(
                 "⛔ Stopped" if data["status"] == "stopped" else
                 "❌ Error"
             )
-            final_elapsed = int((datetime.now() - start_time).total_seconds())
+            final_elapsed = 0 if start_time is None else int((datetime.now() - start_time).total_seconds())
             timer_label.set_text(f"Total test time: {format_duration(final_elapsed)}")
             run_btn.enable()
             stop_btn.disable()
@@ -187,6 +207,20 @@ async def index():
                     bft_results_table.rows.clear()
                     bft_results_table.update()
                     bft_summary_label.set_text("")
+
+                    # Run a ping test until the DUT responds (mirrors ping_test.py output)
+                    bft_status_label.set_text(f"Monitoring {PING_HOST}. Waiting for response...")
+                    attempt = 1
+                    delay_seconds = 2
+                    while True:
+                        ok = await check_ping(PING_HOST)
+                        if ok:
+                            bft_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
+                            break
+                        else:
+                            bft_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
+                            attempt += 1
+                            await asyncio.sleep(delay_seconds)
 
                     await start_run("run", {
                         "serial_no": bft_serial_input.value.strip(),
@@ -298,13 +332,27 @@ async def index():
                     dvt_timer_label.set_text("Total test time: 00:00:00")
                     dvt_summary_label.set_text("")
 
+                    # Run a ping test until the DUT responds (mirrors ping_test.py output)
+                    dvt_status_label.set_text(f"Monitoring {PING_HOST}. Waiting for response...")
+                    attempt = 1
+                    delay_seconds = 2
+                    while True:
+                        ok = await check_ping(PING_HOST)
+                        if ok:
+                            dvt_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
+                            break
+                        else:
+                            dvt_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
+                            attempt += 1
+                            await asyncio.sleep(delay_seconds)
+
                     await start_run("dvt/run", {
                         "serial_no": dvt_serial_input.value.strip(),
                         "temperature": dvt_temp.value,
                         "tests": selected
                     })
 
-                    start_time = datetime.now()
+                    start_time = None
 
                     def group_by_flow(results: list) -> dict[str, list]:
                         flow_results: dict[str, list] = {f: [] for f in dvt_flows.keys()}
@@ -323,10 +371,14 @@ async def index():
                     while True:
                         data = await poll_status("dvt/run/current")
 
-                        elapsed = int((datetime.now() - start_time).total_seconds())
+                        # Start timer when first test reports 'running'
+                        running = next((r for r in data["results"] if r["status"] == "running"), None)
+                        if running and start_time is None:
+                            start_time = datetime.now()
+
+                        elapsed = 0 if start_time is None else int((datetime.now() - start_time).total_seconds())
                         dvt_timer_label.set_text(f"Total test time: {format_duration(elapsed)}")
 
-                        running = next((r for r in data["results"] if r["status"] == "running"), None)
                         if running:
                             dvt_status_label.set_text(f"Running: {running['name']}...")
 
@@ -344,7 +396,7 @@ async def index():
                                 "⛔ Stopped" if data["status"] == "stopped" else
                                 "❌ Error"
                             )
-                            final_elapsed = int((datetime.now() - start_time).total_seconds())
+                            final_elapsed = 0 if start_time is None else int((datetime.now() - start_time).total_seconds())
                             dvt_timer_label.set_text(f"Total test time: {format_duration(final_elapsed)}")
                             dvt_run_btn.enable()
                             dvt_stop_btn.disable()
