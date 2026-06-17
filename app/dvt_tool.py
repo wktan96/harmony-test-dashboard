@@ -29,6 +29,7 @@ class DVTTool:
         self.pathloss = "/tarana/images/sanmina_dvt_pathloss.json"
 
         self._process: subprocess.Popen | None = None
+        self._stop_requested = False
 
     def _build_t3_cmd(self, band_dir: Path, flow: str, sub_dir: str, script: str, args: str = "") -> str:
         out_path = f"{band_dir}_{flow}/{sub_dir}"
@@ -87,8 +88,10 @@ class DVTTool:
 
     def run_selected(self, selected: list[str], on_result: Callable[[dict], None]):
         commands = self.get_commands()
+        # reset stop flag when starting a run
+        self._stop_requested = False
 
-        for name in selected:
+        for idx, name in enumerate(selected):
             cmd = commands[name]
 
             on_result({
@@ -116,6 +119,18 @@ class DVTTool:
                 "output_path": None,
             })
 
+            # If stop was requested, mark remaining tests as stopped and exit
+            if self._stop_requested:
+                for rem in selected[idx+1:]:
+                    on_result({
+                        "name": rem,
+                        "command": commands.get(rem, ""),
+                        "status": "stopped",
+                        "duration": None,
+                        "output_path": None,
+                    })
+                break
+
         self._process = None
         
     def get_test_flow(self,test_name: str) -> str:
@@ -126,5 +141,7 @@ class DVTTool:
         return "Unknown"
 
     def stop(self):
+        # Signal run_selected to stop and terminate any running process
+        self._stop_requested = True
         if self._process and self._process.poll() is None:
             self._process.terminate()

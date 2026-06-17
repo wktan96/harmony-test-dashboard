@@ -21,6 +21,7 @@ class BFTTool:
         self.hostfile = "/tarana/images/rn0"
         
         self._process: subprocess.Popen | None = None
+        self._stop_requested = False
 
     def build_t3_cmd(self, sub_dir: str, script: str, args: str = "") -> str:
         out_path = f"{self.base_dir}/{sub_dir}"
@@ -52,8 +53,10 @@ class BFTTool:
         
     def run_selected(self, selected: list[str], on_result: Callable[[dict], None]):
         commands = self.get_commands()
-        
-        for name in selected:
+        # reset stop flag when starting a run
+        self._stop_requested = False
+
+        for idx, name in enumerate(selected):
             cmd = commands[name]
 
             on_result({
@@ -71,10 +74,10 @@ class BFTTool:
             duration = round(time.time() - start, 1)
 
             # Debug prints
-            print(f"--- {name} ---")
-            print(f"returncode: {returncode}")
-            print(f"stdout: {stdout.decode()}")
-            print(f"stderr: {stderr.decode()}")
+            # print(f"--- {name} ---")
+            # print(f"returncode: {returncode}")
+            # print(f"stdout: {stdout.decode()}")
+            # print(f"stderr: {stderr.decode()}")
 
             if returncode is None:
                 break
@@ -86,6 +89,33 @@ class BFTTool:
                 "duration": duration,
                 "output_path": str(self.base_dir / name)
             })
+
+            # If a critical init test failed, abort the remaining sequence
+            critical = {"cal_set_freq_test", "rf_init_g2_rn_3ghz", "rf_init_g2_rn_6ghz"}
+            if returncode != 0 and name in critical and idx < len(selected) - 1:
+                # mark remaining tests as stopped
+                for rem in selected[idx+1:]:
+                    on_result({
+                        "name": rem,
+                        "command": commands.get(rem, ""),
+                        "status": "stopped",
+                        "duration": None,
+                        "output_path": str(self.base_dir / rem)
+                    })
+                break
+
+            # If stop was requested via stop(), bail out
+            if self._stop_requested:
+                # mark any remaining tests as stopped
+                for rem in selected[idx+1:]:
+                    on_result({
+                        "name": rem,
+                        "command": commands.get(rem, ""),
+                        "status": "stopped",
+                        "duration": None,
+                        "output_path": str(self.base_dir / rem)
+                    })
+                break
 
         # After all tests are done, reset the process reference
         # If stop() were somehow called after the run finishes, it could attempt to terminate a process that already ended
@@ -99,5 +129,7 @@ class BFTTool:
         # returns 1      → process finished with an error
         
         # Terminating an already-finished process would crash your program, so we have to check if it's still running before trying to stop it.
+        # Signal run_selected to stop between tests and terminate any running process
+        self._stop_requested = True
         if self._process and self._process.poll() is None:
             self._process.terminate()
