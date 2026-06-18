@@ -2,6 +2,8 @@ import subprocess
 import time
 from pathlib import Path
 from collections.abc import Callable
+import os
+import signal
 
 from app.dvt_constants import DVT_FLOWS, TEST_SPECS, RF_INIT_ARGS, PDA_CONFIGS, PRESET_3GHZ_REDUCED, PRESET_6GHZ_REDUCED
 
@@ -103,10 +105,28 @@ class DVTTool:
             })
 
             start = time.time()
-            self._process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = self._process.communicate()
+            self._process = subprocess.Popen(cmd, shell=True, 
+                                             stdout=subprocess.PIPE, 
+                                             stderr=subprocess.STDOUT, 
+                                             text=True, bufsize=1, 
+                                             start_new_session=True)
+            
+            # Print out the output of each test into the terminal
+            print(f"\n{'='*60}")
+            print(f"Test: {name}")
+            print(f"{'='*60}")
+
+            # Stream output line by line as it arrives
+            for line in self._process.stdout:
+                print(line, end="", flush=True)
+
+            self._process.wait()
             returncode = self._process.returncode
             duration = round(time.time() - start, 1)
+
+            print(f"\nStatus  : {'PASS' if returncode == 0 else 'FAIL'}")
+            print(f"Duration: {duration}s")
+            print(f"{'='*60}\n")
 
             if returncode is None:
                 break
@@ -144,4 +164,12 @@ class DVTTool:
         # Signal run_selected to stop and terminate any running process
         self._stop_requested = True
         if self._process and self._process.poll() is None:
-            self._process.terminate()
+            # self._process.terminate()
+            
+            # Kill the entire group (Shell + test commands)
+            # This replaces the need for process.terminate()
+            os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
+
+            # Clean up system resources (Mandatory)
+            # This prevents zombie processes on Ubuntu
+            self._process.wait()

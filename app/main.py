@@ -5,6 +5,10 @@ from app.schemas import BFTRunRequest, DVTRunRequest, RunStatus, TestResult
 from app.bft_tool import BFTTool, BFT_TESTS
 from app.dvt_tool import DVTTool, DVT_TESTS, DVT_FLOWS, PRESET_3GHZ_REDUCED_TESTS, PRESET_6GHZ_REDUCED_TESTS
 from app import frontend  # noqa: F401
+import logging
+
+# Suppress uvicorn access logs to keep the terminal clean
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 app = FastAPI(title="BFT Dashboard API", version="0.5.0")
 
