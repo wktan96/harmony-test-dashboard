@@ -1,0 +1,14 @@
+# ==========================================
+# 🔐 SECRETS & ENVIRONMENT VARIABLES (NEVER COMMIT)
+# ==========================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+certs/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class

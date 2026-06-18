@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from nicegui import ui
@@ -6,9 +7,21 @@ from app.bft_tool import BFTTool, BFT_TESTS
 from app.dvt_tool import DVTTool, DVT_TESTS, DVT_FLOWS, PRESET_3GHZ_REDUCED_TESTS, PRESET_6GHZ_REDUCED_TESTS
 from app import frontend  # noqa: F401
 import logging
+from app.database import init_db, save_run, save_test_results, get_all_runs
 
 # Suppress uvicorn access logs to keep the terminal clean
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
+# Call once on startup — creates tables if they don't exist
+while True:
+    try: 
+        init_db()
+        print("Database connection is successful.")
+        break
+    except Exception as error:
+        print("Connecting to database failed")
+        print(f"Error: {error}")
+        time.sleep(2)
 
 app = FastAPI(title="BFT Dashboard API", version="0.5.0")
 
@@ -52,6 +65,11 @@ def run_bft_job(job_id: str, serial_no: str, selected_tests: list[str]):
         jobs[job_id].status = "error"
         jobs[job_id].summary = str(e)
 
+    finally:
+        # Save to database regardless of outcome
+        save_run(job_id, "bft", jobs[job_id].serial_no, jobs[job_id].status, jobs[job_id].summary)
+        save_test_results(job_id, jobs[job_id].results)
+
 # ─── DVT background job ───────────────────────────────
 def run_dvt_job(job_id: str, serial_no: str, selected_tests: list[str]):
     global dvt_current_tool
@@ -80,6 +98,23 @@ def run_dvt_job(job_id: str, serial_no: str, selected_tests: list[str]):
     except Exception as e:
         dvt_jobs[job_id].status = "error"
         dvt_jobs[job_id].summary = str(e)
+
+    finally:
+        save_run(job_id, "dvt", dvt_jobs[job_id].serial_no, dvt_jobs[job_id].status, dvt_jobs[job_id].summary, dvt_jobs[job_id].temperature if hasattr(dvt_jobs[job_id], "temperature") else None)
+        save_test_results(job_id, dvt_jobs[job_id].results)
+
+
+# ─── Common endpoints ────────────────────────────────────
+@app.get("/history")
+def get_history():
+    return get_all_runs()
+
+@app.get("/history/{job_id}")
+def get_history_by_id(job_id: str):
+    run = get_run_by_id(job_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
 
 # ─── BFT endpoints ────────────────────────────────────
 @app.get("/health")
@@ -118,7 +153,7 @@ def start_run(request: BFTRunRequest, background_tasks: BackgroundTasks):
 def get_current_run():
     """Returns the latest run — used by the frontend to poll."""
     if current_job_id is None:
-        raise HTTPException(status_code=404, detail="No run has been started yet")
+        raise HTTPException(status_code=404, detail="No BFT run has been started yet")
     return jobs[current_job_id]
 
 
