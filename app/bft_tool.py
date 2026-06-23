@@ -7,6 +7,7 @@ import os
 import signal
 
 from app.bft_constants import BFT_TESTS, BFT_SPECS, PDA_CONFIGS
+from app.config import DEV_MODE
 
 class BFTTool:
     def __init__(self, serial_no: str):
@@ -39,6 +40,17 @@ class BFTTool:
 
     def get_commands(self) -> dict[str, str]:
         """Maps each test name to its t3 command."""
+
+        if DEV_MODE:
+            dev_commands = [
+                "sleep 1",
+                "sleep 2",
+                "sleep 3",
+                "sleep 4",
+                "sleep 5",
+            ]
+            return dict(zip(BFT_TESTS, dev_commands))
+        
         commands = {}
         for test_name, spec in BFT_SPECS.items():
             args = spec.get("args", "")

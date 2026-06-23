@@ -2,8 +2,13 @@ import asyncio
 import httpx
 from datetime import datetime
 from nicegui import ui
+from app.config import DEV_MODE  # Import configuration to read system state
 
-BASE_URL = "http://localhost:8000"
+if DEV_MODE:
+    BASE_URL = "http://localhost:9000"
+else:
+    BASE_URL = "http://localhost:8000"
+
 PING_HOST = "192.168.12.2"
 
 
@@ -78,6 +83,7 @@ def apply_preset(preset: list[str], dvt_checkboxes: dict, dvt_flows: dict, dvt_f
         if all(t in preset for t in flow_tests):
             dvt_flow_toggles[flow_name].set_value(True)
 
+TABLE_DEFAULTS = {'headerClasses': 'uppercase text-center text-primary'}
 
 def make_table_columns():
     return [
@@ -90,11 +96,11 @@ def make_table_columns():
 
 
 def make_table(columns: list) -> ui.table:
-    table = ui.table(columns=columns, rows=[]).classes("w-full").style("table-layout: fixed;")
+    table = ui.table(columns=columns, rows=[], column_defaults=TABLE_DEFAULTS).classes("w-full").style("table-layout: fixed;")
     table.add_slot("body-cell-status", """
         <q-td :props="props" style="text-align: center;">
             <q-badge
-                :color="props.value === 'pass' ? 'green' : props.value === 'fail' ? 'red' : 'grey'"
+                :color="props.value === 'pass' ? 'green' : props.value === 'fail' ? 'red' : props.value === 'running' ? 'blue' : 'grey'"
                 :label="props.value"
                 style="font-size: 12px; padding: 4px 10px;"
             />
@@ -165,17 +171,38 @@ async def run_polling_loop(
 
 @ui.page("/")
 async def index():
+    # Initialize NiceGUI Dark Mode interface (defaults to light mode)
+    dark_mode_manager = ui.dark_mode()
 
-    # ─── Fetch tests for both tabs ────────────────────
+    # ─── Fetch tests for panels ───────────────────────
     bft_available_tests = await fetch_tests("bft/tests")
     dvt_available_tests = await fetch_tests("dvt/tests")
 
+    # Localized mutable state flags to track user cancel events
+    bft_ping_cancelled = {"value": False}
+    dvt_ping_cancelled = {"value": False}
+
     with ui.card().classes("w-full"):
-        ui.label("Harmony Test Dashboard").classes("text-xl font-bold")
+        # Header Row: Title + Dev Mode Banner + Theme Toggle Layout Container
+        with ui.row().classes("w-full justify-between items-center mb-2"):
+            with ui.row().classes("items-center gap-4"):
+                ui.label("Harmony Test Dashboard").classes("text-xl font-bold")
+                
+                # Dynamic Dev Mode Indicator Banner
+                if DEV_MODE:
+                    ui.badge("DEV MODE ACTIVE", color="amber-9").classes("text-sm font-semibold px-3 py-1 text-white")
+            
+            # Dark Mode UI Switch Handler
+            with ui.row().classes("items-center gap-2"):
+                ui.icon("dark_mode").classes("text-lg")
+                theme_switch = ui.switch(value=False)
+                # Bind toggle evaluation closure directly into NiceGUI engine state
+                theme_switch.on_value_change(lambda e: dark_mode_manager.set_value(e.value))
 
         with ui.tabs() as tabs:
             bft_tab = ui.tab("BFT")
             dvt_tab = ui.tab("DVT")
+            history_tab = ui.tab("History")
 
         with ui.tab_panels(tabs, value=bft_tab).classes("w-full"):
 
@@ -201,7 +228,10 @@ async def index():
                             return
 
                     bft_run_btn.disable()
-                    bft_stop_btn.enable()
+                    bft_stop_btn.disable()
+                    bft_ping_stop_btn.set_visibility(True)
+                    bft_ping_cancelled["value"] = False
+
                     bft_status_label.set_text("Running...")
                     bft_timer_label.set_text("Total test time: 00:00:00")
                     bft_results_table.rows.clear()
@@ -213,9 +243,17 @@ async def index():
                     attempt = 1
                     delay_seconds = 2
                     while True:
+                        if bft_ping_cancelled["value"]:
+                            bft_status_label.set_text("⛔ Ping monitoring aborted by user.")
+                            bft_ping_stop_btn.set_visibility(False)
+                            bft_run_btn.enable()
+                            return
+
                         ok = await check_ping(PING_HOST)
                         if ok:
                             bft_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
+                            bft_ping_stop_btn.set_visibility(False)
+                            bft_stop_btn.enable()
                             break
                         else:
                             bft_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
@@ -239,11 +277,13 @@ async def index():
 
                 async def handle_bft_stop():
                     await stop_run("stop")
-                    
-                with ui.row():
+
+                with ui.row().classes("items-center gap-2"):
                     bft_run_btn  = ui.button("Run",  on_click=handle_bft_run)
                     bft_stop_btn = ui.button("Stop", on_click=handle_bft_stop).props("color=red")
+                    bft_ping_stop_btn = ui.button("STOP PING", on_click=lambda: bft_ping_cancelled.update({"value": True})).props("color=orange text-color=white")
                     bft_stop_btn.disable()
+                    bft_ping_stop_btn.set_visibility(False)
 
                 with ui.row().classes("items-center gap-4"):
                     ui.label("Run All")
@@ -327,7 +367,10 @@ async def index():
                         dvt_flow_tables[flow_name].update()
 
                     dvt_run_btn.disable()
-                    dvt_stop_btn.enable()
+                    dvt_stop_btn.disable()
+                    dvt_ping_stop_btn.set_visibility(True)
+                    dvt_ping_cancelled["value"] = False
+
                     dvt_status_label.set_text("Running...")
                     dvt_timer_label.set_text("Total test time: 00:00:00")
                     dvt_summary_label.set_text("")
@@ -337,9 +380,17 @@ async def index():
                     attempt = 1
                     delay_seconds = 2
                     while True:
+                        if dvt_ping_cancelled["value"]:
+                            dvt_status_label.set_text("⛔ Ping monitoring aborted by user.")
+                            dvt_ping_stop_btn.set_visibility(False)
+                            dvt_run_btn.enable()
+                            return
+
                         ok = await check_ping(PING_HOST)
                         if ok:
                             dvt_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
+                            dvt_ping_stop_btn.set_visibility(False)
+                            dvt_stop_btn.enable()
                             break
                         else:
                             dvt_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
@@ -415,12 +466,14 @@ async def index():
                     dvt_run_btn.enable()
                     dvt_cancel_btn.set_visibility(False)
 
-                with ui.row().classes("items-center gap-4"):
+                with ui.row().classes("items-center gap-2"):
                     dvt_run_btn  = ui.button("Run",  on_click=handle_dvt_run)
                     dvt_stop_btn = ui.button("Stop", on_click=handle_dvt_stop).props("color=red")
                     dvt_cancel_btn = ui.button("Cancel Schedule", on_click=handle_dvt_cancel_schedule).props("color=orange")
+                    dvt_ping_stop_btn = ui.button("STOP PING", on_click=lambda: dvt_ping_cancelled.update({"value": True})).props("color=orange text-color=white")
                     dvt_stop_btn.disable()
                     dvt_cancel_btn.set_visibility(False)
+                    dvt_ping_stop_btn.set_visibility(False)
 
                 # ── Scheduled start ───────────────────
                 with ui.row().classes("items-center gap-4 mt-2"):
@@ -519,3 +572,83 @@ async def index():
                         flow_table = make_table(make_table_columns())
                         dvt_flow_tables[flow_name] = flow_table
                         dvt_flow_sections[flow_name] = flow_section
+
+            # ─────────────────────────────────────────
+            # HISTORY TAB
+            # ─────────────────────────────────────────
+            with ui.tab_panel(history_tab):
+                ui.label("Historical Test Runs").classes("text-lg font-medium mb-2")
+
+                history_columns = [
+                    {"name": "job_id",      "label": "Job ID",        "field": "job_id",      "align": "left"},
+                    {"name": "type",        "label": "Type",          "field": "type",        "align": "center"},
+                    {"name": "serial_no",   "label": "Serial No",     "field": "serial_no",   "align": "center"},
+                    {"name": "temperature", "label": "Temp",          "field": "temperature", "align": "center"},
+                    {"name": "status",      "label": "Status",        "field": "status",      "align": "center"},
+                    {"name": "summary",     "label": "Summary",       "field": "summary",     "align": "left"},
+                    {"name": "created_at",  "label": "Executed At",   "field": "created_at",  "align": "left"},
+                ]
+
+                async def load_history():
+                    """Fetches execution records from the DB to populate the master table."""
+                    try:
+                        async with httpx.AsyncClient() as client:
+                            response = await client.get(f"{BASE_URL}/history")
+                            runs = response.json()
+                            
+                            # Clean up fields for simple visual representation
+                            for r in runs:
+                                if "created_at" in r and r["created_at"]:
+                                    r["created_at"] = r["created_at"].replace("T", " ").split(".")[0]
+                                if not r.get("temperature"):
+                                    r["temperature"] = "—"
+                                    
+                            history_table.rows[:] = runs
+                            history_table.update()
+                            details_container.set_visibility(False)
+                    except Exception as err:
+                        ui.notify(f"Failed to load history: {err}", type="negative")
+
+                async def on_history_row_click(e):
+                    """Triggers details retrieval when a history row is selected."""
+                    row_data = e.args[1]
+                    job_id = row_data["job_id"]
+                    try:
+                        async with httpx.AsyncClient() as client:
+                            response = await client.get(f"{BASE_URL}/history/{job_id}")
+                            run_data = response.json()
+                            
+                            if run_data and "results" in run_data:
+                                # Safe from KeyError mismatch on schemas.py properties
+                                details_title.set_text(f"Detailed Results for Job: {job_id}")
+                                details_table.rows[:] = format_rows(run_data["results"])
+                                details_table.update()
+                                details_container.set_visibility(True)
+                            else:
+                                ui.notify("No test results found for this run record.", type="warning")
+                    except Exception as err:
+                        ui.notify(f"Error fetching run details: {err}", type="negative")
+
+                with ui.row().classes("mb-4"):
+                    ui.button("Refresh History", icon="refresh", on_click=load_history).props("outline")
+
+                # Master Runs Table
+                history_table = ui.table(columns=history_columns, rows=[], column_defaults=TABLE_DEFAULTS).classes("w-full mb-6")
+                history_table.add_slot("body-cell-status", """
+                    <q-td :props="props" style="text-align: center;">
+                        <q-badge
+                            :color="props.value === 'done' ? 'green' : props.value === 'error' ? 'red' : props.value === 'stopped' ? 'orange' : 'blue'"
+                            :label="props.value"
+                            style="font-size: 11px; padding: 4px 8px;"
+                        />
+                    </q-td>
+                """)
+                history_table.on("row-click", on_history_row_click)
+
+                # Detail View Layout Structure (Hidden by default)
+                with ui.column().classes("w-full border-t pt-4") as details_container:
+                    details_container.set_visibility(False)
+                    details_title = ui.label("").classes("text-md font-bold text-gray-700 mb-2")
+                    details_table = make_table(make_table_columns())
+
+                ui.timer(0.1, load_history, once=True)

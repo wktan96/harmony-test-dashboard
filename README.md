@@ -25,10 +25,16 @@ curl -Lf https://astral.sh/uv/install.sh | sh
 uv sync
 ```
  
-### Run
+### Production mode
  
 ```bash
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### Development mode
+
+```bash
+DEV_MODE=true uv run uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
 ```
  
 ### Access
