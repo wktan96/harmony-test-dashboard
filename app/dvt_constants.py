@@ -6,6 +6,8 @@ This module contains:
 - Command argument templates and builders
 """
 
+from app.config import DEV_MODE
+
 # Test flow organization
 DVT_FLOWS = {
     "3GHz Test Flow 1": [
@@ -726,3 +728,38 @@ PDA_CONFIGS = {
         "power_levels": "33,30,27,24,21,18,15,12,9",
     },
 }
+
+# ─── Dynamic Development Enhancements ───────────────────
+DEV_SLEEP_FLOW = {
+    "Sleep Cmd (Dev Mode)": [
+        "dev_sleep_1s",
+        "dev_sleep_2s",
+        "dev_sleep_3s"
+    ]
+} if DEV_MODE else {}
+
+if DEV_MODE:
+    # We still update TEST_SPECS so get_commands() can resolve the underlying actions
+    TEST_SPECS.update({
+        "dev_sleep_1s": {
+            "band": "3g",
+            "flow": "dev_flow",
+            "sub_dir": "dev_sleep",
+            "script": "sleep 1",
+            "args": ""
+        },
+        "dev_sleep_2s": {
+            "band": "3g",
+            "flow": "dev_flow",
+            "sub_dir": "dev_sleep",
+            "script": "sleep 2",
+            "args": ""
+        },
+        "dev_sleep_3s": {
+            "band": "3g",
+            "flow": "dev_flow",
+            "sub_dir": "dev_sleep",
+            "script": "sleep 3",
+            "args": ""
+        }
+    })

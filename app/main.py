@@ -8,6 +8,8 @@ from app.dvt_tool import DVTTool, DVT_TESTS, DVT_FLOWS, PRESET_3GHZ_REDUCED_TEST
 from app import frontend  # noqa: F401
 import logging
 from app.database import init_db, save_run, save_test_results, get_all_runs
+import asyncio
+from app.notifier import send_telegram_notification
 
 # Suppress uvicorn access logs to keep the terminal clean
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
@@ -66,9 +68,26 @@ def run_bft_job(job_id: str, serial_no: str, selected_tests: list[str]):
         jobs[job_id].summary = str(e)
 
     finally:
-        # Save to database regardless of outcome
+        # 1. Save to database regardless of outcome
         save_run(job_id, "bft", jobs[job_id].serial_no, jobs[job_id].status, jobs[job_id].summary)
         save_test_results(job_id, jobs[job_id].results)
+
+        # 2. Construct and send the Telegram Notification
+        status_emoji = "✅" if jobs[job_id].status == "done" else "⛔" if jobs[job_id].status == "stopped" else "❌"
+        
+        tg_message = (
+            f"⚡ *BFT Test Cycle Complete* ⚡\n\n"
+            f"• *Job ID:* `{job_id}`\n"
+            f"• *Serial No:* `{serial_no}`\n"
+            f"• *Status:* {status_emoji} {jobs[job_id].status.upper()}\n"
+            f"• *Summary:* {jobs[job_id].summary}\n"
+        )
+        
+        # Fire off the async function from inside this synchronous thread boundary
+        try:
+            asyncio.run(send_telegram_notification(tg_message))
+        except Exception as tg_err:
+            print(f"Telegram notification dispatch error: {tg_err}")
 
 # ─── DVT background job ───────────────────────────────
 def run_dvt_job(job_id: str, serial_no: str, selected_tests: list[str]):
@@ -100,9 +119,26 @@ def run_dvt_job(job_id: str, serial_no: str, selected_tests: list[str]):
         dvt_jobs[job_id].summary = str(e)
 
     finally:
+        # 1. Save to database regardless of outcome
         save_run(job_id, "dvt", dvt_jobs[job_id].serial_no, dvt_jobs[job_id].status, dvt_jobs[job_id].summary, dvt_jobs[job_id].temperature if hasattr(dvt_jobs[job_id], "temperature") else None)
         save_test_results(job_id, dvt_jobs[job_id].results)
 
+        # 2. Construct and send the Telegram Notification
+        status_emoji = "✅" if dvt_jobs[job_id].status == "done" else "⛔" if dvt_jobs[job_id].status == "stopped" else "❌"
+        
+        tg_message = (
+            f"⚡ *DVT Test Cycle Complete* ⚡\n\n"
+            f"• *Job ID:* `{job_id}`\n"
+            f"• *Serial No:* `{serial_no}`\n"
+            f"• *Status:* {status_emoji} {dvt_jobs[job_id].status.upper()}\n"
+            f"• *Summary:* {dvt_jobs[job_id].summary}\n"
+        )
+        
+        # Fire off the async function from inside this synchronous thread boundary
+        try:
+            asyncio.run(send_telegram_notification(tg_message))
+        except Exception as tg_err:
+            print(f"Telegram notification dispatch error: {tg_err}")
 
 # ─── Common endpoints ────────────────────────────────────
 @app.get("/history")

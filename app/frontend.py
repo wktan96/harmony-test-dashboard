@@ -229,7 +229,6 @@ async def index():
 
                     bft_run_btn.disable()
                     bft_stop_btn.disable()
-                    bft_ping_stop_btn.set_visibility(True)
                     bft_ping_cancelled["value"] = False
 
                     bft_status_label.set_text("Running...")
@@ -238,27 +237,32 @@ async def index():
                     bft_results_table.update()
                     bft_summary_label.set_text("")
 
-                    # Run a ping test until the DUT responds (mirrors ping_test.py output)
-                    bft_status_label.set_text(f"Monitoring {PING_HOST}. Waiting for response...")
-                    attempt = 1
-                    delay_seconds = 2
-                    while True:
-                        if bft_ping_cancelled["value"]:
-                            bft_status_label.set_text("⛔ Ping monitoring aborted by user.")
-                            bft_ping_stop_btn.set_visibility(False)
-                            bft_run_btn.enable()
-                            return
+                    # ── Conditional Ping Loop ────────────────────────
+                    if DEV_MODE:
+                        bft_status_label.set_text("⏩ DEV_MODE active: Skipping BFT Ping Test.")
+                        bft_stop_btn.enable()
+                    else:
+                        bft_ping_stop_btn.set_visibility(True)
+                        bft_status_label.set_text(f"Monitoring {PING_HOST}. Waiting for response...")
+                        attempt = 1
+                        delay_seconds = 2
+                        while True:
+                            if bft_ping_cancelled["value"]:
+                                bft_status_label.set_text("⛔ Ping monitoring aborted by user.")
+                                bft_ping_stop_btn.set_visibility(False)
+                                bft_run_btn.enable()
+                                return
 
-                        ok = await check_ping(PING_HOST)
-                        if ok:
-                            bft_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
-                            bft_ping_stop_btn.set_visibility(False)
-                            bft_stop_btn.enable()
-                            break
-                        else:
-                            bft_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
-                            attempt += 1
-                            await asyncio.sleep(delay_seconds)
+                            ok = await check_ping(PING_HOST)
+                            if ok:
+                                bft_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
+                                bft_ping_stop_btn.set_visibility(False)
+                                bft_stop_btn.enable()
+                                break
+                            else:
+                                bft_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
+                                attempt += 1
+                                await asyncio.sleep(delay_seconds)
 
                     await start_run("run", {
                         "serial_no": bft_serial_input.value.strip(),
@@ -366,36 +370,47 @@ async def index():
                         dvt_flow_tables[flow_name].rows.clear()
                         dvt_flow_tables[flow_name].update()
 
+                    # Dynamic display state update rule for dev sleep row layout
+                    if DEV_MODE:
+                        has_dev_tests = any(t in selected for t in dev_sleep_cmds)
+                        dvt_flow_sections["Sleep Cmd (Dev Mode)"].set_visibility(has_dev_tests)
+                        dvt_flow_tables["Sleep Cmd (Dev Mode)"].rows.clear()
+                        dvt_flow_tables["Sleep Cmd (Dev Mode)"].update()
+
                     dvt_run_btn.disable()
                     dvt_stop_btn.disable()
-                    dvt_ping_stop_btn.set_visibility(True)
                     dvt_ping_cancelled["value"] = False
 
                     dvt_status_label.set_text("Running...")
                     dvt_timer_label.set_text("Total test time: 00:00:00")
                     dvt_summary_label.set_text("")
 
-                    # Run a ping test until the DUT responds (mirrors ping_test.py output)
-                    dvt_status_label.set_text(f"Monitoring {PING_HOST}. Waiting for response...")
-                    attempt = 1
-                    delay_seconds = 2
-                    while True:
-                        if dvt_ping_cancelled["value"]:
-                            dvt_status_label.set_text("⛔ Ping monitoring aborted by user.")
-                            dvt_ping_stop_btn.set_visibility(False)
-                            dvt_run_btn.enable()
-                            return
+                    # ── Conditional Ping Loop ────────────────────────
+                    if DEV_MODE:
+                        dvt_status_label.set_text("⏩ DEV_MODE active: Skipping DVT Ping Test.")
+                        dvt_stop_btn.enable()
+                    else:
+                        dvt_ping_stop_btn.set_visibility(True)
+                        dvt_status_label.set_text(f"Monitoring {PING_HOST}. Waiting for response...")
+                        attempt = 1
+                        delay_seconds = 2
+                        while True:
+                            if dvt_ping_cancelled["value"]:
+                                dvt_status_label.set_text("⛔ Ping monitoring aborted by user.")
+                                dvt_ping_stop_btn.set_visibility(False)
+                                dvt_run_btn.enable()
+                                return
 
-                        ok = await check_ping(PING_HOST)
-                        if ok:
-                            dvt_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
-                            dvt_ping_stop_btn.set_visibility(False)
-                            dvt_stop_btn.enable()
-                            break
-                        else:
-                            dvt_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
-                            attempt += 1
-                            await asyncio.sleep(delay_seconds)
+                            ok = await check_ping(PING_HOST)
+                            if ok:
+                                dvt_status_label.set_text(f"✅ Success! {PING_HOST} responded on attempt {attempt}. Starting tests...")
+                                dvt_ping_stop_btn.set_visibility(False)
+                                dvt_stop_btn.enable()
+                                break
+                            else:
+                                dvt_status_label.set_text(f"Attempt {attempt}: Host is still down. Retrying in {delay_seconds}s...")
+                                attempt += 1
+                                await asyncio.sleep(delay_seconds)
 
                     await start_run("dvt/run", {
                         "serial_no": dvt_serial_input.value.strip(),
@@ -407,8 +422,14 @@ async def index():
 
                     def group_by_flow(results: list) -> dict[str, list]:
                         flow_results: dict[str, list] = {f: [] for f in dvt_flows.keys()}
+                        if DEV_MODE:
+                            flow_results["Sleep Cmd (Dev Mode)"] = []
+                            
                         for r in results:
                             flow = r.get("flow") or "Unknown"
+                            # Map raw strings back to our standardized layout group title
+                            if DEV_MODE and r.get("name") in dev_sleep_cmds:
+                                flow = "Sleep Cmd (Dev Mode)"
                             if flow in flow_results:
                                 flow_results[flow].append(r)
                         return flow_results
@@ -536,7 +557,38 @@ async def index():
                 run_all_3g.on_value_change(on_run_all_3g_change)
                 run_all_6g.on_value_change(on_run_all_6g_change)
 
-                # ── Per-flow expansion with toggle ────
+                # ── Per-flow result tables & sections maps ────────────
+                dvt_flow_tables: dict[str, ui.table] = {}
+                dvt_flow_sections: dict[str, ui.column] = {}
+
+                # ── Render "Sleep Cmd (Dev Mode)" identical to standard test flow options ──
+                if DEV_MODE:
+                    dev_sleep_cmds = ["dev_sleep_1s", "dev_sleep_2s", "dev_sleep_3s"]
+                    
+                    with ui.row().classes("items-center gap-4 mt-1"):
+                        dev_flow_toggle = ui.switch(value=False)
+                        dvt_flow_toggles["Sleep Cmd (Dev Mode)"] = dev_flow_toggle
+
+                        with ui.expansion("Sleep Cmd (Dev Mode)").classes("flex-1"):
+                            with ui.column():
+                                for test in dev_sleep_cmds:
+                                    dvt_checkboxes[test] = ui.checkbox(test, value=False)
+
+                    def make_dev_toggle_handler(toggle, checkboxes):
+                        return lambda: [cb.set_value(toggle.value) for cb in checkboxes]
+
+                    dev_cbs = [dvt_checkboxes[t] for t in dev_sleep_cmds]
+                    dev_flow_toggle.on_value_change(make_dev_toggle_handler(dev_flow_toggle, dev_cbs))
+
+                    # Setup matching execution tracking elements
+                    with ui.column().classes("w-full") as dev_sleep_section:
+                        dev_sleep_section.set_visibility(False)
+                        ui.label("Sleep Cmd (Dev Mode)").classes("font-medium mt-4")
+                        dev_sleep_table = make_table(make_table_columns())
+                        dvt_flow_tables["Sleep Cmd (Dev Mode)"] = dev_sleep_table
+                        dvt_flow_sections["Sleep Cmd (Dev Mode)"] = dev_sleep_section
+
+                # ── Production loop rendering ────
                 for flow_name, flow_tests in dvt_flows.items():
 
                     with ui.row().classes("items-center gap-4 mt-1"):
@@ -560,10 +612,6 @@ async def index():
                 dvt_summary_label = ui.label("").classes("text-sm text-gray-500")
                 dvt_status_label  = ui.label("").classes("text-sm")
                 dvt_timer_label   = ui.label("").classes("text-sm text-gray-400")
-                
-                # ── Per-flow result tables ────────────
-                dvt_flow_tables: dict[str, ui.table] = {}
-                dvt_flow_sections: dict[str, ui.column] = {}
 
                 for flow_name in dvt_flows.keys():
                     with ui.column().classes("w-full") as flow_section:
@@ -619,7 +667,6 @@ async def index():
                             run_data = response.json()
                             
                             if run_data and "results" in run_data:
-                                # Safe from KeyError mismatch on schemas.py properties
                                 details_title.set_text(f"Detailed Results for Job: {job_id}")
                                 details_table.rows[:] = format_rows(run_data["results"])
                                 details_table.update()

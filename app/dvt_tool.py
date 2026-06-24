@@ -4,6 +4,7 @@ from pathlib import Path
 from collections.abc import Callable
 import os
 import signal
+from app.config import DEV_MODE
 
 from app.dvt_constants import DVT_FLOWS, TEST_SPECS, RF_INIT_ARGS, PDA_CONFIGS, PRESET_3GHZ_REDUCED, PRESET_6GHZ_REDUCED
 
@@ -45,7 +46,7 @@ class DVTTool:
             f"--fixture_loss_c1={cfg['fixture_loss_c1']} "
             f"--carrier_freqs={cfg['carrier_freqs']} --mech_atten=0 --skip_eeprom_write "
             f"--nulling_start_atten=99 --temperature_log={self.temp_input} "
-            f"-L={cfg['power_levels']}"
+            f"-L={cfg['power_levels']} --calculate_adak_temp"
         )
 
     def _get_band_dir(self, band: str) -> Path:
@@ -64,6 +65,11 @@ class DVTTool:
 
         commands = {}
         for test_name, spec in TEST_SPECS.items():
+
+            if DEV_MODE and spec["script"].startswith("sleep"):
+                commands[test_name] = spec["script"]
+                continue
+
             band_dir = self._get_band_dir(spec["band"])
             flow = spec["flow"]
             sub_dir = spec["sub_dir"]
