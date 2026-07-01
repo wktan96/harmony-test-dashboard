@@ -29,16 +29,16 @@ app = FastAPI(title="BFT Dashboard API", version="0.5.0")
 
 # ─── BFT globals ──────────────────────────────────────
 jobs: dict[str, RunStatus] = {}
-current_job_id: str | None = None
+current_job_id: int | None = None
 current_tool: BFTTool | None = None
 
 # ─── DVT globals ──────────────────────────────────────
 dvt_jobs: dict[str, RunStatus] = {}
-dvt_current_job_id: str | None = None
+dvt_current_job_id: int | None = None
 dvt_current_tool: DVTTool | None = None
 
 # ─── BFT background job ───────────────────────────────
-def run_bft_job(job_id: str, serial_no: str, selected_tests: list[str]):
+def run_bft_job(job_id: int, serial_no: str, selected_tests: list[str]):
     global current_tool
 
     def on_result(result: dict):
@@ -90,7 +90,7 @@ def run_bft_job(job_id: str, serial_no: str, selected_tests: list[str]):
             print(f"Telegram notification dispatch error: {tg_err}")
 
 # ─── DVT background job ───────────────────────────────
-def run_dvt_job(job_id: str, serial_no: str, selected_tests: list[str]):
+def run_dvt_job(job_id: int, serial_no: str, selected_tests: list[str]):
     global dvt_current_tool
 
     def on_result(result: dict):
@@ -145,8 +145,8 @@ def run_dvt_job(job_id: str, serial_no: str, selected_tests: list[str]):
 def get_history():
     return get_all_runs()
 
-@app.get("/history/{job_id}")
-def get_history_by_id(job_id: str):
+@app.get("/history")
+def get_history_by_id(job_id: int):
     run = get_run_by_id(job_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -171,7 +171,7 @@ def start_run(request: BFTRunRequest, background_tasks: BackgroundTasks):
     if current_job_id and jobs[current_job_id].status == "running":
         raise HTTPException(status_code=409, detail="A run is already in progress")
 
-    job_id = datetime.now().strftime("%Y%m%d_%H%M%S")  # e.g. "20260513_143022"
+    job_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))  # e.g. 20260513143022
     current_job_id = job_id
     current_tool = BFTTool(serial_no=request.serial_no)
 
@@ -193,8 +193,8 @@ def get_current_run():
     return jobs[current_job_id]
 
 
-@app.get("/run/{job_id}", response_model=RunStatus)
-def get_run_by_id(job_id: str):
+@app.get("/run", response_model=RunStatus)
+def get_run_by_id(job_id: int):
     """Returns a specific run by job_id — used for history review."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -250,7 +250,7 @@ def start_dvt_run(request: DVTRunRequest, background_tasks: BackgroundTasks):
     if dvt_current_job_id and dvt_jobs[dvt_current_job_id].status == "running":
         raise HTTPException(status_code=409, detail="A DVT run is already in progress")
 
-    job_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    job_id = int(datetime.now().strftime("%Y%m%d%H%M%S"))  # e.g. 20260513143022
     dvt_current_job_id = job_id
     dvt_current_tool = DVTTool(
         serial_no=request.serial_no,

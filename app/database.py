@@ -48,7 +48,7 @@ def init_db():
         conn.commit()
 
 
-def save_run(job_id: str, run_type: str, serial_no: str, status: str, summary: str, temperature: str = None):
+def save_run(job_id: int, run_type: str, serial_no: str, status: str, summary: str, temperature: str = None):
     """Saves or updates a run record."""
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -58,15 +58,15 @@ def save_run(job_id: str, run_type: str, serial_no: str, status: str, summary: s
                 ON CONFLICT (job_id) DO UPDATE
                 SET status = EXCLUDED.status,
                     summary = EXCLUDED.summary;
-            """, (job_id, run_type, serial_no, status, summary, temperature))
+            """, (str(job_id), run_type, serial_no, status, summary, temperature))
         conn.commit()
 
 
-def save_test_results(job_id: str, results: list):
+def save_test_results(job_id: int, results: list):
     """Saves all test results for a run."""
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"DELETE FROM {RESULTS_TABLE} WHERE job_id = %s", (job_id,))
+            cur.execute(f"DELETE FROM {RESULTS_TABLE} WHERE job_id = %s", (str(job_id),))
             for r in results:
                 cur.execute(f"""
                     INSERT INTO {RESULTS_TABLE} (job_id, name, command, status, duration, output_path, flow)
@@ -91,14 +91,14 @@ def get_all_runs() -> list:
             return cur.fetchall()
 
 
-def get_run_by_id(job_id: str) -> dict | None:
+def get_run_by_id(job_id: int) -> dict | None:
     """Returns a single run with all its test results."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f"SELECT * FROM {RUNS_TABLE} WHERE job_id = %s", (job_id,))
+            cur.execute(f"SELECT * FROM {RUNS_TABLE} WHERE job_id = %s", (str(job_id),))
             run = cur.fetchone()
             if not run:
                 return None
-            cur.execute(f"SELECT * FROM {RESULTS_TABLE} WHERE job_id = %s ORDER BY id", (job_id,))
+            cur.execute(f"SELECT * FROM {RESULTS_TABLE} WHERE job_id = %s ORDER BY id", (str(job_id),))
             run["results"] = cur.fetchall()
             return run

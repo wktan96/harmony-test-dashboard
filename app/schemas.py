@@ -12,7 +12,7 @@ class TestResult(BaseModel):
     flow: str | None = None  # Only used for DVT results, indicates which flow the test belongs to
 
 class RunStatus(BaseModel):
-    job_id: str
+    job_id: int
     serial_no: str
     status: Literal["running", "done", "error", "stopped"]
     results: list[TestResult] = []
