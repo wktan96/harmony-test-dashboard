@@ -1,0 +1,19 @@
+$kind: collection
+name: harmony test dashboard
+variables:
+  - key: baseUrl
+    value: 'http://localhost:8000'
+  - key: serial_no
+    value: ''
+  - key: job_id
+    value: ''
+scripts:
+  - type: http:beforeRequest
+    code: "pm.request.headers.add({\r
+
+      \    key: 'X-Github-Token',\r
+
+      \    value: pm.environment.get(\"github_token\")\r
+
+      });\r\n"
+    language: text/javascript

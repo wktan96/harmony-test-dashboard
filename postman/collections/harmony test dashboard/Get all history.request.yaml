@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get all history
+url: '{{baseUrl}}/history'
+method: GET
+order: 2000

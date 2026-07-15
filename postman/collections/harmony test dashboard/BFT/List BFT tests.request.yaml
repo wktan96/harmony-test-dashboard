@@ -1,0 +1,5 @@
+$kind: http-request
+name: List BFT tests
+url: '{{baseUrl}}/bft/tests'
+method: GET
+order: 1000

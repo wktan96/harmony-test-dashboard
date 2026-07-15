@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get current DVT run
+url: '{{baseUrl}}/dvt/run/current'
+method: GET
+order: 6000

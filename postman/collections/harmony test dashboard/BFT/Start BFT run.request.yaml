@@ -1,0 +1,15 @@
+$kind: http-request
+name: Start BFT run
+url: '{{baseUrl}}/run'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "serial_no": "{{serial_no}}",
+      "tests": ["test1", "test2"]
+    }
+order: 2000

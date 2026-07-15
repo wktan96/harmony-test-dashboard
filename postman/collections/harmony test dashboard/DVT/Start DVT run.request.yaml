@@ -1,0 +1,16 @@
+$kind: http-request
+name: Start DVT run
+url: '{{baseUrl}}/dvt/run'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "serial_no": "{{serial_no}}",
+      "temperature": "25c",
+      "tests": ["test1", "test2"]
+    }
+order: 5000

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get BFT run by job ID
+url: '{{baseUrl}}/run'
+method: GET
+queryParams:
+  - key: job_id
+    value: '{{job_id}}'
+order: 4000

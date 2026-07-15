@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get 3GHz reduced preset
+url: '{{baseUrl}}/dvt/presets/3ghz-reduced'
+method: GET
+order: 3000

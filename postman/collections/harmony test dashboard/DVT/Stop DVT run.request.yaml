@@ -1,0 +1,5 @@
+$kind: http-request
+name: Stop DVT run
+url: '{{baseUrl}}/dvt/stop'
+method: POST
+order: 7000

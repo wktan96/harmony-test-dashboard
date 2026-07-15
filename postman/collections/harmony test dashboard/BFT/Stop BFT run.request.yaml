@@ -1,0 +1,5 @@
+$kind: http-request
+name: Stop BFT run
+url: '{{baseUrl}}/stop'
+method: POST
+order: 6000

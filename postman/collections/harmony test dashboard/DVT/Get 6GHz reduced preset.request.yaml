@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get 6GHz reduced preset
+url: '{{baseUrl}}/dvt/presets/6ghz-reduced'
+method: GET
+order: 4000

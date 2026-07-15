@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get history by job ID
+url: '{{baseUrl}}/history'
+method: GET
+params:
+  - key: job_id
+    value: '{{job_id}}'
+order: 3000

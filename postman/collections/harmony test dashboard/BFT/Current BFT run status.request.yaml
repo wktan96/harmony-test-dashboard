@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get current BFT run
+url: '{{baseUrl}}/run/current'
+method: GET
+order: 3000
