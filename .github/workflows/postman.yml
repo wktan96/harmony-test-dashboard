@@ -39,7 +39,7 @@ jobs:
       - name: Create .env file
         working-directory: harmony-test-dashboard
         run: |
-          echo "DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_NAME }}" > .env
+          echo "DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}" > .env
 
       - name: Start server
         working-directory: harmony-test-dashboard
@@ -60,7 +60,7 @@ jobs:
 
       - name: Run health check
         run: |
-          newman run harmony-test-dashboard/postman/harmony.postman_collection.json \
-            --environment harmony-test-dashboard/postman/ci.postman_environment.json \
+          newman run postman/harmony.postman_collection.json \
+            --environment postman/ci.postman_environment.json \
             --folder "Health Check" \
             --reporters cli
