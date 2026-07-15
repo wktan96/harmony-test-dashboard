@@ -1,0 +1,368 @@
+{
+  "info": {
+    "_postman_id": "14460a20-f892-4638-8f42-004cd1ae7c10",
+    "name": "harmony test dashboard",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54695007",
+    "_collection_link": "https://go.postman.co/collection/54695007-14460a20-f892-4638-8f42-004cd1ae7c10?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "BFT",
+      "item": [
+        {
+          "name": "List BFT tests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bft/tests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bft",
+                "tests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start BFT run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serial_no\": \"{{serial_no}}\",\n  \"tests\": [\"test1\", \"test2\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "run"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get current BFT run",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/run/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "run",
+                "current"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get BFT run by job ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/run?job_id={{job_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "run"
+              ],
+              "query": [
+                {
+                  "key": "job_id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List all BFT runs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "runs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stop BFT run",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stop"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "DVT",
+      "item": [
+        {
+          "name": "List DVT tests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dvt/tests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "tests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List DVT flows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dvt/flows",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "flows"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get 3GHz reduced preset",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dvt/presets/3ghz-reduced",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "presets",
+                "3ghz-reduced"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get 6GHz reduced preset",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dvt/presets/6ghz-reduced",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "presets",
+                "6ghz-reduced"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start DVT run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serial_no\": \"{{serial_no}}\",\n  \"temperature\": \"25c\",\n  \"tests\": [\"test1\", \"test2\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dvt/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "run"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get current DVT run",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dvt/run/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "run",
+                "current"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stop DVT run",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dvt/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dvt",
+                "stop"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Database",
+      "item": []
+    },
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get all history",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/history",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "history"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get history by job ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/history",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "history"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.add({\r\n    key: 'X-Github-Token',\r\n    value: pm.environment.get(\"github_token\")\r\n});\r\n"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "serial_no",
+      "value": ""
+    },
+    {
+      "key": "job_id",
+      "value": ""
+    }
+  ]
+}
