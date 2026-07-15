@@ -33,16 +33,13 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Install dependencies
-        working-directory: harmony-test-dashboard
         run: uv sync
 
       - name: Create .env file
-        working-directory: harmony-test-dashboard
         run: |
           echo "DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}" > .env
 
       - name: Start server
-        working-directory: harmony-test-dashboard
         run: |
           DEV_MODE=true uv run uvicorn app.main:app --host 0.0.0.0 --port 9000 &
           echo "Server started in background"
