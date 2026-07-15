@@ -1,0 +1,66 @@
+name: Health Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        working-directory: harmony-test-dashboard
+        run: uv sync
+
+      - name: Create .env file
+        working-directory: harmony-test-dashboard
+        run: |
+          echo "DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_NAME }}" > .env
+
+      - name: Start server
+        working-directory: harmony-test-dashboard
+        run: |
+          DEV_MODE=true uv run uvicorn app.main:app --host 0.0.0.0 --port 9000 &
+          echo "Server started in background"
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..10}; do
+            curl -s http://localhost:9000/health && break
+            echo "Waiting for server... attempt $i"
+            sleep 3
+          done
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run health check
+        run: |
+          newman run harmony-test-dashboard/postman/harmony.postman_collection.json \
+            --environment harmony-test-dashboard/postman/ci.postman_environment.json \
+            --folder "Health Check" \
+            --reporters cli
